@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ops-admin-api
+    runtime: go
+    plan: free
+    buildCommand: go build -o bin/server ./cmd/server
+    startCommand: ./bin/server -demo=true
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
