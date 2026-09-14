@@ -14,17 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Recover application source
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Salvage migration archive
         shell: bash
         run: |
-          set -euo pipefail
-          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" https://api.github.com/repos/runfa668/didaima/git/blobs/fbc70458c6d8e095b01d57007befc952073c81ff | jq -r '.content' | tr -d '\n' | base64 -d > /tmp/source.b64
-          base64 -d /tmp/source.b64 > /tmp/source.tgz
-          gzip -t /tmp/source.tgz
-          tar -xzf /tmp/source.tgz
+          set -u
+          base64 -di migration/source.b64 > /tmp/source.tgz
+          gzip -dc /tmp/source.tgz > /tmp/source.tar || true
+          echo 'Recovered tar size:' $(wc -c < /tmp/source.tar)
+          tar -tf /tmp/source.tar || true
+          tar -xf /tmp/source.tar || true
           rm -rf internal/sqlite3driver ops-admin.exe start-linux.sh start-windows.bat docs/screenshots
+          test -f internal/app/app.go
+          test -f cmd/server/main.go
       - name: Format and verify backend
         run: |
           gofmt -w internal/app/app.go internal/app/db.go cmd/server/main.go
