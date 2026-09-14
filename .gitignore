@@ -1,0 +1,20 @@
+# binaries
+ops-admin.exe
+server
+bin/
+
+# local data / env
+.env
+.env.*
+data/*
+!data/.gitkeep
+
+# frontend dependencies / builds
+frontend/node_modules/
+frontend/dist/
+
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
