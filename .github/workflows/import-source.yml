@@ -14,43 +14,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Recover application source from migration blob
+      - name: Recover application source
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL https://api.github.com/repos/runfa668/didaima/git/blobs/fbc70458c6d8e095b01d57007befc952073c81ff \
-            | jq -r '.content' | tr -d '\n' | base64 -d > /tmp/source.b64
-          base64 -d /tmp/source.b64 > /tmp/source.tgz
-          tar -xzf /tmp/source.tgz \
-            --exclude='internal/app/db.go' \
-            --exclude='cmd/server/main.go' \
-            --exclude='go.mod' \
-            --exclude='render.yaml'
-      - name: Apply PostgreSQL proxy compatibility fixes
-        shell: python
-        run: |
-          from pathlib import Path
-          p = Path('internal/app/app.go')
-          s = p.read_text()
-          old = '''\t\t\tif origin := r.Header.Get("Origin"); origin != "" {\n\t\t\t\tbase := "http://" + r.Host\n\t\t\t\tif r.TLS != nil {\n\t\t\t\t\tbase = "https://" + r.Host\n\t\t\t\t}\n\t\t\t\tif origin != base {\n\t\t\t\t\twriteErr(w, fail(403, "Cross-origin write rejected"))\n\t\t\t\t\treturn\n\t\t\t\t}\n\t\t\t}\n'''
-          new = '''\t\t\tif origin := r.Header.Get("Origin"); origin != "" {\n\t\t\t\tbase := "http://" + r.Host\n\t\t\t\tif r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {\n\t\t\t\t\tbase = "https://" + r.Host\n\t\t\t\t}\n\t\t\t\tpublicOrigin := strings.TrimRight(os.Getenv("PUBLIC_ORIGIN"), "/")\n\t\t\t\tif origin != base && (publicOrigin == "" || origin != publicOrigin) {\n\t\t\t\t\twriteErr(w, fail(403, "Cross-origin write rejected"))\n\t\t\t\t\treturn\n\t\t\t\t}\n\t\t\t}\n'''
-          if old in s:
-              s = s.replace(old, new)
-          marker = 'func queryMaps(db interface {'
-          names = '''var postgresColumnNames = map[string]string{\n\t"channelname": "channelName", "teamname": "teamName", "accountcount": "accountCount",\n\t"leadername": "leaderName", "employeecount": "employeeCount", "accountchannelname": "accountChannelName",\n\t"appname": "appName", "employeename": "employeeName", "holdername": "holderName",\n\t"chataccountuid": "chatAccountUid", "chataccountname": "chatAccountName", "chataccountbakname": "chatAccountBakName",\n\t"employeeid": "employeeId", "entrycount": "entryCount",\n}\n\n'''
-          if 'var postgresColumnNames' not in s:
-              s = s.replace(marker, names + marker)
-          oldmap = '''\t\tfor i, c := range cols {\n\t\t\tv := vals[i]\n\t\t\tif b, ok := v.([]byte); ok {\n\t\t\t\tv = string(b)\n\t\t\t}\n\t\t\tm[c] = v\n\t\t}\n'''
-          newmap = '''\t\tfor i, c := range cols {\n\t\t\tv := vals[i]\n\t\t\tif b, ok := v.([]byte); ok {\n\t\t\t\tv = string(b)\n\t\t\t}\n\t\t\tif tm, ok := v.(time.Time); ok {\n\t\t\t\tif tm.Hour() == 0 && tm.Minute() == 0 && tm.Second() == 0 && tm.Nanosecond() == 0 {\n\t\t\t\t\tv = tm.Format("2006-01-02")\n\t\t\t\t} else {\n\t\t\t\t\tv = tm.Format("2006-01-02 15:04:05")\n\t\t\t\t}\n\t\t\t}\n\t\t\tif canonical, ok := postgresColumnNames[strings.ToLower(c)]; ok {\n\t\t\t\tc = canonical\n\t\t\t}\n\t\t\tm[c] = v\n\t\t}\n'''
-          if oldmap in s:
-              s = s.replace(oldmap, newmap)
-          p.write_text(s)
-      - name: Format and commit imported source
+          base64 -d migration/source.b64 > /tmp/source.tgz
+          tar -xzf /tmp/source.tgz
+          rm -rf internal/sqlite3driver ops-admin.exe start-linux.sh start-windows.bat docs/screenshots
+      - name: Format and verify backend
         run: |
           gofmt -w internal/app/app.go internal/app/db.go cmd/server/main.go
-          rm -rf internal/sqlite3driver ops-admin.exe start-linux.sh start-windows.bat
+          go mod tidy
+          go test ./...
+          go build -o /tmp/ops-admin ./cmd/server
+      - name: Verify frontend
+        run: |
+          cd frontend
+          npm install
+          npm run typecheck
+          npm run build
+      - name: Commit imported source
+        run: |
+          rm -rf migration
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add backend internal web cmd go.mod render.yaml
-          git commit -m 'feat: import employee revenue management application source' || exit 0
+          git add -A
+          git commit -m 'feat: import complete employee revenue management application' || exit 0
           git push
