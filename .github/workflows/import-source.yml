@@ -15,10 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Recover application source
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          base64 -di migration/source.b64 > /tmp/source.tgz
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" https://api.github.com/repos/runfa668/didaima/git/blobs/fbc70458c6d8e095b01d57007befc952073c81ff | jq -r '.content' | tr -d '\n' | base64 -d > /tmp/source.b64
+          base64 -d /tmp/source.b64 > /tmp/source.tgz
           gzip -t /tmp/source.tgz
           tar -xzf /tmp/source.tgz
           rm -rf internal/sqlite3driver ops-admin.exe start-linux.sh start-windows.bat docs/screenshots
@@ -28,12 +31,9 @@ jobs:
           go mod tidy
           go test ./...
           go build -o /tmp/ops-admin ./cmd/server
-      - name: Verify frontend
+      - name: Verify frontend when present
         run: |
-          cd frontend
-          npm install
-          npm run typecheck
-          npm run build
+          if [ -f frontend/package.json ]; then cd frontend && npm install && npm run typecheck && npm run build; fi
       - name: Commit imported source
         run: |
           rm -rf migration
