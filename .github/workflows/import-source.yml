@@ -18,7 +18,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d migration/source.b64 > /tmp/source.tgz
+          base64 -di migration/source.b64 > /tmp/source.tgz
+          gzip -t /tmp/source.tgz
           tar -xzf /tmp/source.tgz
           rm -rf internal/sqlite3driver ops-admin.exe start-linux.sh start-windows.bat docs/screenshots
       - name: Format and verify backend
