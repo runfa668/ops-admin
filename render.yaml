@@ -14,3 +14,5 @@ services:
         value: "true"
       - key: OPS_COOKIE_SECURE
         value: "true"
+      - key: PUBLIC_ORIGIN
+        value: "https://ops-admin-eta.vercel.app"
