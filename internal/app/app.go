@@ -1704,7 +1704,7 @@ COALESCE(SUM(CASE WHEN w.state='paid' THEN w.amount_cents ELSE 0 END),0),
 COALESCE(SUM(CASE WHEN w.state='paid' AND si.withdrawal_id IS NULL THEN w.holder_share_cents ELSE 0 END),0),
 COALESCE((SELECT SUM(amount_cents) FROM settlements s2 WHERE s2.holder_id=h.id AND s2.company_id=h.company_id AND s2.state='draft'),0),
 COALESCE((SELECT SUM(amount_cents) FROM settlements s3 WHERE s3.holder_id=h.id AND s3.company_id=h.company_id AND s3.state='paid'),0),h.channel_id
-FROM holders h JOIN channels c ON c.id=h.channel_id LEFT JOIN withdrawals w ON w.holder_id=h.id LEFT JOIN settlement_items si ON si.withdrawal_id=w.id WHERE h.company_id=? GROUP BY h.id ORDER BY h.id`, u.CompanyID)
+FROM holders h JOIN channels c ON c.id=h.channel_id LEFT JOIN withdrawals w ON w.holder_id=h.id LEFT JOIN settlement_items si ON si.withdrawal_id=w.id WHERE h.company_id=? GROUP BY h.id,c.name ORDER BY h.id`, u.CompanyID)
 	if e != nil {
 		return e
 	}
