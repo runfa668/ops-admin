@@ -11,9 +11,9 @@ The production topology is Vercel React -> same-origin `/api/*` rewrite -> Rende
 - Build: `go build -o ./bin/ops-admin ./cmd/server`
 - Start: `./bin/ops-admin`
 - Health: `/api/health`
-- Environment: `DATABASE_URL`, `OPS_DEMO=true`, `OPS_COOKIE_SECURE=true`
+- Environment: `DATABASE_URL`, `OPS_DEMO=true`, `OPS_COOKIE_SECURE=true`, `PUBLIC_ORIGIN=https://ops-admin-eta.vercel.app`
 
-The server reads Render's `PORT` automatically.
+The server reads Render's `PORT` automatically. `PUBLIC_ORIGIN` explicitly permits production browser writes proxied through the Vercel origin while retaining the application's origin check.
 
 ## Vercel
 
