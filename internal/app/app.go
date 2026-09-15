@@ -104,10 +104,11 @@ func (s *Server) security(next http.Handler) http.Handler {
 			}
 			if origin := r.Header.Get("Origin"); origin != "" {
 				base := "http://" + r.Host
-				if r.TLS != nil {
+				if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
 					base = "https://" + r.Host
 				}
-				if origin != base {
+				publicOrigin := strings.TrimRight(os.Getenv("PUBLIC_ORIGIN"), "/")
+				if origin != base && (publicOrigin == "" || origin != publicOrigin) {
 					writeErr(w, fail(403, "Cross-origin write rejected"))
 					return
 				}
@@ -1774,7 +1775,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, u *User) erro
 		series = append(series, map[string]any{"day": day, "income": money(inc), "withdraw": money(wd), "balance": 0})
 	}
 	rankArgs := append(append([]any{}, args...), start, end)
-	rankRows, e := queryMaps(s.db, "SELECT e.employee_id employeeId,COALESCE(emp.name,'Unassigned') employeeName,SUM(e.amount_cents) cents FROM earnings e JOIN accounts a ON a.id=e.account_id LEFT JOIN employees emp ON emp.id=e.employee_id WHERE "+cond+" AND e.day BETWEEN ? AND ? GROUP BY e.employee_id ORDER BY cents DESC LIMIT 6", rankArgs...)
+	rankRows, e := queryMaps(s.db, "SELECT e.employee_id employeeId,COALESCE(emp.name,'Unassigned') employeeName,SUM(e.amount_cents) cents FROM earnings e JOIN accounts a ON a.id=e.account_id LEFT JOIN employees emp ON emp.id=e.employee_id WHERE "+cond+" AND e.day BETWEEN ? AND ? GROUP BY e.employee_id,emp.name ORDER BY cents DESC LIMIT 6", rankArgs...)
 	if e != nil {
 		return e
 	}
@@ -1906,10 +1907,10 @@ func (s *Server) incomeReport(w http.ResponseWriter, r *http.Request, u *User, k
 	switch kind {
 	case "employees":
 		selectx = "e.employee_id id,COALESCE(emp.name,'Unassigned') name"
-		group = "e.employee_id"
+		group = "e.employee_id,emp.name"
 	case "teams":
 		selectx = "e.team_id id,COALESCE(t.name,'Unassigned') name"
-		group = "e.team_id"
+		group = "e.team_id,t.name"
 	case "hourly":
 		selectx = "e.hour id,LPAD(e.hour::text,2,'0') || ':00' name"
 		group = "e.hour"
