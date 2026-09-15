@@ -1,16 +1,28 @@
 # Production deployment
 
-The backend uses PostgreSQL via `DATABASE_URL` and is intended for Neon + Render.
+The production topology is Vercel React -> same-origin `/api/*` rewrite -> Render Go -> Neon PostgreSQL.
 
 ## Render
+
+- Service: `ops-admin-go`
 - Runtime: Go
-- Build: `go build -o bin/server ./cmd/server`
-- Start: `./bin/server -demo=true`
+- Plan: Free
+- Region: Virginia
+- Build: `go build -o ./bin/ops-admin ./cmd/server`
+- Start: `./bin/ops-admin`
 - Health: `/api/health`
-- Environment: `DATABASE_URL=<Neon pooled PostgreSQL URL>`
-- Environment after Vercel is created: `PUBLIC_ORIGIN=https://<vercel-domain>`
+- Environment: `DATABASE_URL`, `OPS_DEMO=true`, `OPS_COOKIE_SECURE=true`
 
 The server reads Render's `PORT` automatically.
 
-## Frontend
-The React/Vite frontend is hosted on Vercel. Browser API requests stay under `/api/*`; Vercel rewrites them to the Render service so session cookies, CSRF, and same-origin write protection continue to work.
+## Vercel
+
+- Project: `ops-admin`
+- Production alias: `https://ops-admin-eta.vercel.app`
+- `vercel.json` rewrites `/api/:path*` to the Render service.
+
+Keeping browser API calls under the Vercel origin preserves the application's same-origin Cookie and CSRF model while the API executes on Render.
+
+## Neon
+
+The Go service connects to the existing Neon PostgreSQL project using the pooled `DATABASE_URL`. Do not commit the connection string or database credentials.
