@@ -1,63 +1,32 @@
-name: Import application source
+name: CI
 
 on:
   push:
-    paths:
-      - '.github/workflows/import-source.yml'
-
-permissions:
-  contents: write
+    branches: [main]
+  pull_request:
 
 jobs:
-  import:
-    if: github.actor != 'github-actions[bot]'
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
+      - name: Verify backend
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+          go test ./...
+          go build -o /tmp/ops-admin ./cmd/server
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Recover complete application source
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat migration/v2.part00 migration/v2.part01 migration/v2.part02 migration/v2.part02.tail migration/v2.part03 migration/v2.part04 migration/v2.part05 migration/v2.part06 migration/v2.part07 migration/v2.part08 migration/v2.part09a migration/v2.part09b migration/v2.part10 | base64 -d > /tmp/source.tgz
-          gzip -t /tmp/source.tgz
-          tar -xzf /tmp/source.tgz
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('frontend/src/runtime.tsx')
-          s=p.read_text()
-          s=s.replace("{approve:'审核提现',reject:'驳回提现',pay:'登记支付'}[m.action]", "({approve:'审核提现',reject:'驳回提现',pay:'登记支付'} as AnyRow)[m.action]")
-          s=s.replace("ReactDOM.render(<App/>,document.getElementById('root'));", "ReactDOM.render(h(App,{}),document.getElementById('root'));")
-          p.write_text(s)
-          p=Path('frontend/src/main.tsx')
-          s=p.read_text()
-          if "./style.css" not in s:
-              s="import './style.css'\n"+s
-          p.write_text(s)
-          PY
-      - name: Verify backend
-        run: |
-          gofmt -w internal/app/app.go internal/app/db.go cmd/server/main.go
-          go mod tidy
-          go test ./...
-          go build -o /tmp/ops-admin ./cmd/server
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - name: Verify frontend
         run: |
           cd frontend
-          npm install
+          npm ci
           npm run typecheck
           npm run build
-      - name: Commit complete source
-        shell: bash
-        run: |
-          rm -rf migration
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'feat: import complete employee revenue management application'
-          git push
