@@ -1,0 +1,4 @@
+{
+  "compilerOptions": {"target":"ES2018","module":"None","jsx":"react","outFile":"../web/assets/app.js","strict":false,"skipLibCheck":true,"lib":["ES2018","DOM"]},
+  "files":["src/globals.d.ts","src/runtime.tsx"]
+}

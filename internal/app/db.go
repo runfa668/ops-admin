@@ -76,9 +76,10 @@ func insertTable(q string) string {
 	}
 	return ""
 }
+
 func (d *DB) Exec(q string, args ...any) (sql.Result, error) {
 	rq := rebind(q)
-	if table := insertTable(q); idTables[table] && !strings.Contains(strings.ToLower(q), "returning") {
+	if table := insertTable(q); idTables[table] && !strings.Contains(strings.ToLower(q), "returning") && !strings.Contains(strings.ToLower(q), " on conflict ") {
 		var id int64
 		if err := d.DB.QueryRow(rq+" RETURNING id", args...).Scan(&id); err != nil {
 			return nil, err
@@ -100,7 +101,7 @@ func (d *DB) PingContext(ctx context.Context) error { return d.DB.PingContext(ct
 
 func (t *Tx) Exec(q string, args ...any) (sql.Result, error) {
 	rq := rebind(q)
-	if table := insertTable(q); idTables[table] && !strings.Contains(strings.ToLower(q), "returning") {
+	if table := insertTable(q); idTables[table] && !strings.Contains(strings.ToLower(q), "returning") && !strings.Contains(strings.ToLower(q), " on conflict ") {
 		var id int64
 		if err := t.Tx.QueryRow(rq+" RETURNING id", args...).Scan(&id); err != nil {
 			return nil, err
