@@ -160,8 +160,7 @@ class App extends React.Component {
             body[k] = v;
         } if (((_a = m.row) === null || _a === void 0 ? void 0 : _a.version) != null)
             body.version = m.row.version; const id = (_b = m.row) === null || _b === void 0 ? void 0 : _b.id; await this.mutate(`/api/${this.state.route}${id ? '/' + id : ''}`, id ? 'PUT' : 'POST', body); };
-        this.deleteEntity = async (row) => { if (!confirm('确定删除这条记录？'))
-            return; await this.mutate(`/api/${this.state.route}/${row.id}?version=${row.version || 0}`, 'DELETE', undefined); };
+        this.deleteEntity = async (row) => { const run = () => this.mutate(`/api/${this.state.route}/${row.id}?version=${row.version || 0}`, 'DELETE', undefined); if (Antd.Modal && Antd.Modal.confirm) { Antd.Modal.confirm({ title: '确定删除这条记录？', content: '删除后不可恢复。', okText: '删除', cancelText: '取消', okButtonProps: { danger: true }, onOk: run }); return; } if (confirm('确定删除这条记录？')) await run(); };
         this.createSpecial = () => { const r = this.state.route; if (entityForms[r])
             this.open('entity');
         else if (r === 'earnings')
