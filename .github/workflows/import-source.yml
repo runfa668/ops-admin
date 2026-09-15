@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat migration/v2.part{00..10} | base64 -d > /tmp/source.tgz
+          cat migration/v2.part00 migration/v2.part01 migration/v2.part02 migration/v2.part02.tail migration/v2.part03 migration/v2.part04 migration/v2.part05 migration/v2.part06 migration/v2.part07 migration/v2.part08 migration/v2.part09a migration/v2.part09b migration/v2.part10 | base64 -d > /tmp/source.tgz
           gzip -t /tmp/source.tgz
           tar -xzf /tmp/source.tgz
           test -f internal/app/app.go
