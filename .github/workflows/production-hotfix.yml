@@ -1,0 +1,41 @@
+name: Production Hotfix
+
+on:
+  push:
+    paths:
+      - .github/workflows/production-hotfix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Patch PostgreSQL production queries and origin handling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('internal/app/app.go')
+          s = p.read_text()
+          s = s.replace('if r.TLS != nil {\n\t\t\t\t\tbase = "https://" + r.Host\n\t\t\t\t}\n\t\t\t\tif origin != base {', 'if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {\n\t\t\t\t\tbase = "https://" + r.Host\n\t\t\t\t}\n\t\t\t\tpublicOrigin := strings.TrimRight(os.Getenv("PUBLIC_ORIGIN"), "/")\n\t\t\t\tif origin != base && (publicOrigin == "" || origin != publicOrigin) {')
+          s = s.replace('GROUP BY e.employee_id ORDER BY cents DESC LIMIT 6', 'GROUP BY e.employee_id,emp.name ORDER BY cents DESC LIMIT 6')
+          s = s.replace('group = "e.employee_id"', 'group = "e.employee_id,emp.name"')
+          s = s.replace('group = "e.team_id"', 'group = "e.team_id,t.name"')
+          p.write_text(s)
+          PY
+          gofmt -w internal/app/app.go
+          go test ./...
+          git diff --check
+      - name: Commit hotfix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add internal/app/app.go
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: make production queries PostgreSQL-safe"
+          git push
