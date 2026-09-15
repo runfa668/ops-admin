@@ -1,11 +1,16 @@
 services:
   - type: web
-    name: ops-admin-api
+    name: ops-admin-go
     runtime: go
     plan: free
-    buildCommand: go build -o bin/server ./cmd/server
-    startCommand: ./bin/server -demo=true
+    region: virginia
+    buildCommand: go build -o ./bin/ops-admin ./cmd/server
+    startCommand: ./bin/ops-admin
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false
+      - key: OPS_DEMO
+        value: "true"
+      - key: OPS_COOKIE_SECURE
+        value: "true"
