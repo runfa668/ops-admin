@@ -30,3 +30,16 @@ jobs:
           npm ci
           npm run typecheck
           npm run build
+      - name: Verify migrated source tree is clean
+        run: |
+          test -f backend/schema.sql
+          test -f internal/app/app.go
+          test -f internal/app/db.go
+          test -f frontend/package.json
+          test -f frontend/src/runtime.tsx
+          test -f web/index.html
+          test ! -e migration
+          test ! -e internal/sqlite3driver
+          test ! -e ops-admin.exe
+          test ! -e start-linux.sh
+          test ! -e start-windows.bat
