@@ -32,6 +32,14 @@ jobs:
           test -f backend/schema.sql
           test -f frontend/package.json
           test -f web/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('frontend/src/runtime.tsx')
+          s=p.read_text()
+          s=s.replace("{approve:'审核提现',reject:'驳回提现',pay:'登记支付'}[m.action]", "({approve:'审核提现',reject:'驳回提现',pay:'登记支付'} as AnyRow)[m.action]")
+          s=s.replace("ReactDOM.render(<App/>,document.getElementById('root'));", "ReactDOM.render(h(App,{}),document.getElementById('root'));")
+          p.write_text(s)
+          PY
       - name: Verify backend
         run: |
           gofmt -w internal/app/app.go internal/app/db.go cmd/server/main.go
