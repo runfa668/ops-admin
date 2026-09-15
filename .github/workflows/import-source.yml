@@ -39,6 +39,11 @@ jobs:
           s=s.replace("{approve:'审核提现',reject:'驳回提现',pay:'登记支付'}[m.action]", "({approve:'审核提现',reject:'驳回提现',pay:'登记支付'} as AnyRow)[m.action]")
           s=s.replace("ReactDOM.render(<App/>,document.getElementById('root'));", "ReactDOM.render(h(App,{}),document.getElementById('root'));")
           p.write_text(s)
+          p=Path('frontend/src/main.tsx')
+          s=p.read_text()
+          if "./style.css" not in s:
+              s="import './style.css'\n"+s
+          p.write_text(s)
           PY
       - name: Verify backend
         run: |
